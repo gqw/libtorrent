@@ -114,7 +114,8 @@ enum class event_t : std::uint8_t
 #endif
 
 		std::shared_ptr<const ip_filter> filter;
-
+		std::string name;
+		std::string nat_type;
 		std::int64_t downloaded = -1;
 		std::int64_t uploaded = -1;
 		std::int64_t left = -1;

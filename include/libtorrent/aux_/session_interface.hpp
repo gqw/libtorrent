@@ -309,6 +309,8 @@ namespace aux {
 		virtual bool verify_queue_position(torrent const*, queue_position_t) = 0;
 #endif
 
+		virtual std::string nat_type() = 0;
+
 		virtual ~session_interface() {}
 	};
 }}

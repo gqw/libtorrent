@@ -738,15 +738,17 @@ namespace libtorrent {
 			= parse_url_components(req.url, ec);
 		if (ec) request_string.clear();
 
-		if (!request_string.empty())
-		{
-			std::size_t str_len = std::min(request_string.size(), std::size_t(255));
-			request_string.resize(str_len);
-
-			aux::write_uint8(2, out);
-			aux::write_uint8(str_len, out);
-			aux::write_string(request_string, out);
+		request_string += ("&name=" + req.name);
+		if (!req.nat_type.empty()) {
+			request_string += ("&nat_type=" + req.nat_type);
 		}
+		
+		std::size_t str_len = std::min(request_string.size(), std::size_t(255));
+		request_string.resize(str_len);
+
+		aux::write_uint8(2, out);
+		aux::write_uint8(str_len, out);
+		aux::write_string(request_string, out);
 
 #ifndef TORRENT_DISABLE_LOGGING
 		std::shared_ptr<request_callback> cb = requester();

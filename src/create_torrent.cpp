@@ -46,6 +46,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/aux_/session_settings.hpp"
 #include "libtorrent/session.hpp" // for default_disk_io_constructor
 #include "libtorrent/aux_/directory.hpp"
+#include "libtorrent/hex.hpp"
 #include "libtorrent/disk_interface.hpp"
 
 #include <sys/types.h>
@@ -770,7 +771,11 @@ namespace {
 					files.list().emplace_back();
 					entry& file_e = files.list().back();
 					if (m_include_mtime && m_files.mtime(i)) file_e["mtime"] = m_files.mtime(i);
-					file_e["length"] = m_files.file_size(i);
+					auto file_size = m_files.file_size(i);
+					file_e["length"] = file_size;
+					if (file_size > 0) {
+						file_e["sha1"] = aux::to_hex(m_files.hash(i));
+					}
 
 					TORRENT_ASSERT(has_parent_path(m_files.file_path(i)));
 

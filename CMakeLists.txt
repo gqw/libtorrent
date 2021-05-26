@@ -457,6 +457,15 @@ set(try_signal_sources
 	signal_error_code
 )
 
+set(stun_sources
+	Buffer
+	Discovery
+	Message
+	Network
+	UUID
+)
+
+
 list(TRANSFORM sources PREPEND "src/")
 list(TRANSFORM kademlia_sources PREPEND "src/kademlia/")
 list(TRANSFORM ed25519_sources PREPEND "src/ed25519/")
@@ -465,6 +474,7 @@ list(TRANSFORM libtorrent_extensions_include_files PREPEND "include/libtorrent/e
 list(TRANSFORM libtorrent_aux_include_files PREPEND "include/libtorrent/aux_/")
 list(TRANSFORM libtorrent_kademlia_include_files PREPEND "include/libtorrent/kademlia/")
 list(TRANSFORM try_signal_sources PREPEND "deps/try_signal/")
+list(TRANSFORM stun_sources PREPEND "deps/stun/stun/")
 
 # these options control target creation and thus have to be declared before the add_library() call
 feature_option(BUILD_SHARED_LIBS "build libtorrent as a shared library" ON)
@@ -540,6 +550,7 @@ add_library(torrent-rasterbar
 	${libtorrent_include_files}
 	${libtorrent_extensions_include_files}
 	${libtorrent_aux_include_files}
+	${stun_sources}
 )
 
 # C++ 14 support is required
@@ -575,7 +586,8 @@ set_target_properties(torrent-rasterbar
 target_include_directories(torrent-rasterbar PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	PRIVATE deps/try_signal
+	PRIVATE deps/try_signal 
+	PRIVATE deps/stun
 )
 
 target_compile_definitions(torrent-rasterbar

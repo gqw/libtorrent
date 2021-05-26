@@ -128,6 +128,9 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/http_tracker_connection.hpp"
 #include "libtorrent/udp_tracker_connection.hpp"
 
+#include "stun/Discovery.h"
+#include "stun/Network.h"
+
 #endif // TORRENT_DISABLE_LOGGING
 
 #ifdef TORRENT_USE_LIBGCRYPT
@@ -739,6 +742,13 @@ bool ssl_server_name_callback(ssl::stream_handle_type stream_handle, std::string
 		// apply all m_settings to this session
 		run_all_updates(*this);
 		reopen_listen_sockets(false);
+		auto self = shared_from_this();
+		m_stun_thread = std::move(std::thread([this, self]() {
+			network::startup();
+			stun::Discovery disc("59.111.106.155", 3478);
+			m_nat_type = disc.discover();
+			network::cleanup();
+		}));
 
 #if TORRENT_USE_INVARIANT_CHECKS
 		check_invariant();
@@ -5771,6 +5781,9 @@ namespace {
 
 		if (!m_settings.get_bool(settings_pack::enable_dht)) return;
 
+		// note gqw, just for test
+		return;
+
 		// postpone starting the DHT if we're still resolving the DHT router
 		if (m_outstanding_router_lookups > 0)
 		{
@@ -6216,6 +6229,9 @@ namespace {
 			fclose(f);
 		}
 #endif
+		if (m_stun_thread.joinable()) {
+			m_stun_thread.join();
+		}
 	}
 
 #if TORRENT_ABI_VERSION == 1

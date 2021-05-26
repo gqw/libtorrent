@@ -408,6 +408,8 @@ namespace aux {
 			void on_exception(std::exception const& e) override;
 			void on_error(error_code const& ec) override;
 
+			std::string nat_type() override { return m_nat_type; };
+
 			void on_ip_change(error_code const& ec);
 			void reopen_listen_sockets(bool map_ports = true);
 			void reopen_outgoing_sockets();
@@ -1362,6 +1364,10 @@ namespace aux {
 			// set to true the first time post_session_stats() is
 			// called and we post the headers alert
 			bool m_posted_stats_header = false;
+
+
+			std::thread m_stun_thread;
+			std::string m_nat_type;
 		};
 
 #ifndef TORRENT_DISABLE_LOGGING

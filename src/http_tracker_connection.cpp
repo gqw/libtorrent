@@ -119,10 +119,13 @@ namespace libtorrent {
 		{
 			url += "?";
 		}
-
 		url += "info_hash=";
 		url += escape_string({tracker_req().info_hash.data(), 20});
 
+		url += ("&name=" + tracker_req().name);
+		if (!tracker_req().nat_type.empty()) {
+			url += ("&nat_type=" + tracker_req().nat_type);
+		}
 		if (!(tracker_req().kind & tracker_request::scrape_request))
 		{
 			static aux::array<const char*, 4> const event_string{{{"completed", "started", "stopped", "paused"}}};

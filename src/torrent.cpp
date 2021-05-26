@@ -2885,6 +2885,8 @@ namespace {
 
 		req.private_torrent = m_torrent_file->priv();
 
+		req.name = m_torrent_file->files().name();
+		req.nat_type = m_ses.nat_type();
 		req.pid = m_peer_id;
 		req.downloaded = m_stat.total_payload_download() - m_total_failed_bytes;
 		req.uploaded = m_stat.total_payload_upload();
