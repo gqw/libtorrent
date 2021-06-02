@@ -480,6 +480,9 @@ list(TRANSFORM stun_sources PREPEND "deps/stun/stun/")
 feature_option(BUILD_SHARED_LIBS "build libtorrent as a shared library" ON)
 feature_option(static_runtime "build libtorrent with static runtime" OFF)
 
+# set(BUILD_SHARED_LIBS OFF)
+# set(static_runtime ON)
+
 find_public_dependency(Threads REQUIRED)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
@@ -544,7 +547,7 @@ if (NOT BUILD_SHARED_LIBS)
 	set(OPENSSL_USE_STATIC_LIBS ON)
 endif()
 
-add_library(torrent-rasterbar
+add_library(torrent-rasterbar 
 	${sources}
 	${try_signal_sources}
 	${libtorrent_include_files}
@@ -569,6 +572,7 @@ target_compile_features(torrent-rasterbar
 )
 
 if (BUILD_SHARED_LIBS)
+	message("********************************")
 	target_compile_definitions(torrent-rasterbar
 		PRIVATE TORRENT_BUILDING_SHARED
 		INTERFACE TORRENT_LINKING_SHARED
