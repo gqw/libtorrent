@@ -742,13 +742,13 @@ bool ssl_server_name_callback(ssl::stream_handle_type stream_handle, std::string
 		// apply all m_settings to this session
 		run_all_updates(*this);
 		reopen_listen_sockets(false);
-		auto self = shared_from_this();
-		m_stun_thread = std::move(std::thread([this, self]() {
-			network::startup();
-			stun::Discovery disc("59.111.106.155", 3478);
-			m_nat_type = disc.discover();
-			network::cleanup();
-		}));
+		//auto self = shared_from_this();
+		//m_stun_thread = std::move(std::thread([this, self]() {
+		//	network::startup();
+		//	stun::Discovery disc("59.111.106.155", 3478);
+		//	m_nat_type = disc.discover();
+		//	network::cleanup();
+		//}));
 
 #if TORRENT_USE_INVARIANT_CHECKS
 		check_invariant();

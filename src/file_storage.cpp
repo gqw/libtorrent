@@ -263,6 +263,7 @@ namespace aux {
 		, symlink_attribute(fe.symlink_attribute)
 		, root(fe.root)
 		, path_index(fe.path_index)
+		, hash(fe.hash)
 	{
 		bool const borrow = fe.name_len != name_is_owned;
 		set_name(fe.filename(), borrow);
@@ -281,6 +282,7 @@ namespace aux {
 		symlink_attribute = fe.symlink_attribute;
 		no_root_dir = fe.no_root_dir;
 		root = fe.root;
+		hash = fe.hash;
 
 		// if the name is not owned, don't allocate memory, we can point into the
 		// same metadata buffer
@@ -303,6 +305,7 @@ namespace aux {
 		, name(fe.name)
 		, root(fe.root)
 		, path_index(fe.path_index)
+		, hash(fe.hash)
 	{
 		fe.name_len = 0;
 		fe.name = nullptr;
@@ -323,7 +326,7 @@ namespace aux {
 		name = fe.name;
 		root = fe.root;
 		name_len = fe.name_len;
-
+		hash = fe.hash;
 		fe.name_len = 0;
 		fe.name = nullptr;
 		return *this;
@@ -761,8 +764,9 @@ namespace aux {
 
 		if (filehash)
 		{
-			if (m_file_hashes.size() < m_files.size()) m_file_hashes.resize(m_files.size());
-			m_file_hashes[last_file()] = filehash;
+			e.hash = filehash;
+			// if (m_file_hashes.size() < m_files.size()) m_file_hashes.resize(m_files.size());
+			// m_file_hashes[last_file()] = e.hash.c_str();
 		}
 		if (!symlink_path.empty()
 			&& m_symlinks.size() < aux::file_entry::not_a_symlink - 1)
@@ -788,6 +792,13 @@ namespace aux {
 		TORRENT_ASSERT_PRECOND(index >= file_index_t{} && index < end_file());
 		if (index >= m_file_hashes.end_index()) return sha1_hash();
 		return sha1_hash(m_file_hashes[index]);
+	}
+
+	char const* file_storage::file_hash(file_index_t const index) const
+	{
+		TORRENT_ASSERT_PRECOND(index >= file_index_t{} && index < end_file());
+		if (index >= m_files.end_index()) return nullptr;
+		return m_files[index].hash.c_str();
 	}
 
 	sha256_hash file_storage::root(file_index_t const index) const
@@ -944,7 +955,7 @@ namespace {
 		return crc.checksum();
 	}
 
-	std::string file_storage::file_path(file_index_t const index, std::string const& save_path) const
+	std::string file_storage::file_path(file_index_t const index, std::string const& save_path, bool append_root_dir) const
 	{
 		TORRENT_ASSERT_PRECOND(index >= file_index_t(0) && index < end_file());
 		aux::file_entry const& fe = m_files[index];
@@ -976,7 +987,7 @@ namespace {
 
 			ret.reserve(save_path.size() + m_name.size() + p.size() + fe.filename().size() + 3);
 			ret.assign(save_path);
-			append_path(ret, m_name);
+			if (append_root_dir) append_path(ret, m_name);
 			append_path(ret, p);
 			append_path(ret, fe.filename());
 		}

@@ -54,6 +54,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <functional>
 #include <memory>
+#include <fstream>
 
 using namespace std::placeholders;
 
@@ -143,7 +144,20 @@ namespace {
 			}
 			else
 			{
-				fs.add_file(l, s.file_size, file_flags, std::time_t(s.mtime));
+				std::fstream in;
+				in.exceptions(std::ifstream::failbit);
+				in.open(f, std::ios_base::in | std::ios_base::binary);
+				in.seekg(0, std::ios_base::end);
+				size_t const size = size_t(in.tellg());
+				in.seekg(0, std::ios_base::beg);
+				std::vector<char> ret(size);
+				in.read(ret.data(), int(size));
+				hasher h(ret.data(), size);
+				error_code ec;
+				fs.add_file_borrow(ec, {}, l, s.file_size, file_flags, aux::to_hex(h.final()).c_str(), std::time_t(s.mtime));
+				if (ec) aux::throw_ex<system_error>(ec);
+
+				// fs.add_file(l, s.file_size, file_flags, std::time_t(s.mtime));
 			}
 		}
 	}
@@ -774,7 +788,8 @@ namespace {
 					auto file_size = m_files.file_size(i);
 					file_e["length"] = file_size;
 					if (file_size > 0) {
-						file_e["sha1"] = aux::to_hex(m_files.hash(i));
+						auto hash = m_files.file_hash(i);
+						file_e["sha1"] = (hash == nullptr ? "" : hash);
 					}
 
 					TORRENT_ASSERT(has_parent_path(m_files.file_path(i)));

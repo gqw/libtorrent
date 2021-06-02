@@ -188,6 +188,7 @@ namespace aux {
 		// in this field contains the full, absolute path
 		// to the file
 		aux::path_index_t path_index = file_entry::no_path;
+		std::string hash;
 	};
 
 } // aux namespace
@@ -486,11 +487,12 @@ namespace aux {
 		// where this file starts. It can be used to map the file to a piece
 		// index (given the piece size).
 		sha1_hash hash(file_index_t index) const;
+		char const* file_hash(file_index_t index) const;
 		sha256_hash root(file_index_t index) const;
 		char const* root_ptr(file_index_t const index) const;
 		std::string symlink(file_index_t index) const;
 		std::time_t mtime(file_index_t index) const;
-		std::string file_path(file_index_t index, std::string const& save_path = "") const;
+		std::string file_path(file_index_t index, std::string const& save_path = "", bool append_root_dir = true) const;
 		string_view file_name(file_index_t index) const;
 		std::int64_t file_size(file_index_t index) const;
 		bool pad_file_at(file_index_t index) const;

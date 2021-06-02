@@ -532,9 +532,9 @@ namespace {
 			file_flags |= file_storage::flag_pad_file;
 
 		bdecode_node const fh = dict.dict_find_string("sha1");
-		char const* filehash = nullptr;
-		if (fh && fh.string_length() == 20)
-			filehash = info_buffer + (fh.string_offset() - info_offset);
+		std::string filehash;
+		if (fh && (fh.string_length() == 20 || fh.string_length() == 40))
+			filehash = std::string(info_buffer + (fh.string_offset() - info_offset), fh.string_length());
 
 		std::string symlink_path;
 		if (file_flags & file_storage::flag_symlink)
@@ -566,7 +566,7 @@ namespace {
 			filename = {};
 		}
 
-		files.add_file_borrow(ec, filename, path, file_size, file_flags, filehash
+		files.add_file_borrow(ec, filename, path, file_size, file_flags, filehash.c_str()
 			, mtime, symlink_path);
 		return !ec;
 	}

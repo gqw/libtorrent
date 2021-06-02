@@ -188,6 +188,9 @@ int main(int argc_, char const* argv_[]) try
 			case 'l':
 				flags |= lt::create_torrent::symlinks;
 				continue;
+			case '1':
+				flags |= lt::create_torrent::v1_only;
+				continue;
 			case '2':
 				flags |= lt::create_torrent::v2_only;
 				continue;
