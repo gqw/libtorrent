@@ -73,6 +73,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/peer_connection.hpp"
 #include "libtorrent/bt_peer_connection.hpp"
 #include "libtorrent/web_peer_connection.hpp"
+#include "libtorrent/web_zip_peer_connection.hpp"
 #include "libtorrent/http_seed_connection.hpp"
 #include "libtorrent/peer_connection_handle.hpp"
 #include "libtorrent/peer_id.hpp"
@@ -267,6 +268,12 @@ bool is_downloading_state(int const st)
 		{
 			for (auto const& e : m_torrent_file->web_seeds())
 				ws.emplace_back(e);
+
+			
+			for (auto const& url : m_torrent_file->zip_web_seeds().urls) {
+				web_seed_t wseed(url, web_seed_entry::type_t::url_zip_seed, "");
+				ws.emplace_back(wseed);
+			}
 		}
 
 		// add web seeds from add_torrent_params
@@ -2363,6 +2370,8 @@ bool is_downloading_state(int const st)
 			if (torrent_file().info_hashes().has_v2())
 				hashes.resize(torrent_file().orig_files().blocks_in_piece2(m_checking_piece));
 
+			debug_log("check hash, m_checking_piece: %d"
+				, static_cast<int>(m_checking_piece));
 			span<sha256_hash> v2_span(hashes);
 			m_ses.disk_thread().async_hash(m_storage, m_checking_piece, v2_span, flags
 				, [self = shared_from_this(), hashes = std::move(hashes)]
@@ -3887,6 +3896,9 @@ namespace {
 			if (torrent_file().info_hashes().has_v1())
 			{
 				passed = sha1_hash(piece_hash) == m_torrent_file->hash_for_piece(piece);
+				debug_log("pieces index: %d, ismatch: %d recv hash: %s, file hash: %s", piece, passed,
+					aux::to_hex(sha1_hash(piece_hash)).data(), 
+					aux::to_hex(m_torrent_file->hash_for_piece(piece)).data());
 			}
 
 			if (!block_hashes.empty())
@@ -6569,7 +6581,11 @@ namespace {
 		};
 
 		std::shared_ptr<peer_connection> c;
-		if (web->type == web_seed_entry::url_seed)
+		if (web->type == web_seed_entry::url_zip_seed)
+		{
+			c = std::make_shared<web_zip_peer_connection>(pack, *web);
+		} 
+		else if (web->type == web_seed_entry::url_seed)
 		{
 			c = std::make_shared<web_peer_connection>(pack, *web);
 		}

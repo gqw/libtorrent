@@ -1,7 +1,7 @@
 /*
 
-Copyright (c) 2004, 2009, 2013-2014, 2016-2017, 2019-2020, Arvid Norberg
-Copyright (c) 2004, Magnus Jonsson
+Copyright (c) 2006-2007, 2009-2020, Arvid Norberg
+Copyright (c) 2016-2017, Alden Torres
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -31,31 +31,40 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#ifndef TORRENT_PEER_REQUEST_HPP_INCLUDED
-#define TORRENT_PEER_REQUEST_HPP_INCLUDED
+#ifndef TORRENT_WEB_ZIP_PEER_CONNECTION_HPP_INCLUDED
+#define TORRENT_WEB_ZIP_PEER_CONNECTION_HPP_INCLUDED
 
-#include "libtorrent/units.hpp"
+
+#include "libtorrent/web_peer_connection.hpp"
 
 namespace libtorrent {
 
-	// represents a byte range within a piece. Internally this is is used for
-	// incoming piece requests.
-	struct TORRENT_EXPORT peer_request
+	class TORRENT_EXTRA_EXPORT web_zip_peer_connection
+		: public web_peer_connection
 	{
-		// The index of the piece in which the range starts.
-		piece_index_t piece;
-		// The byte offset within that piece where the range starts.
-		int start;
-		// The size of the range, in bytes.
-		int length;
-		// origin length before zip
-		int unzip_length;
+	public:
 
-		// returns true if the right hand side peer_request refers to the same
-		// range as this does.
-		bool operator==(peer_request const& r) const
-		{ return piece == r.piece && start == r.start && length == r.length; }
+		// this is the constructor where the we are the active part.
+		// The peer_connection should handshake and verify that the
+		// other end has the correct id
+		web_zip_peer_connection(peer_connection_args& pack
+			, web_seed_t& web) :web_peer_connection(pack, web){
+			m_picker_options |= piece_picker::align_expanded_pieces;
+			m_picker_options |= piece_picker::on_parole;
+		}
+
+		// void on_connected() override;
+
+		//connection_type type() const override
+		//{ return connection_type::url_zip_seed; }
+
+	protected:
+		void send_block_requests() override;
+		void incoming_payload(char const* buf, int len) override;
+		void write_request(peer_request const& r) override;
+		void incoming_piece_fragment(int const bytes);
+
 	};
 }
 
-#endif // TORRENT_PEER_REQUEST_HPP_INCLUDED
+#endif // TORRENT_WEB_ZIP_PEER_CONNECTION_HPP_INCLUDED

@@ -638,7 +638,7 @@ namespace aux {
 		// if force is true, the blocks is also freed from the piece
 		// picker, allowing another peer to request it immediately
 		void cancel_request(piece_block const& b, bool force = false);
-		void send_block_requests();
+		virtual void send_block_requests();
 
 		void assign_bandwidth(int channel, int amount) override;
 
@@ -777,7 +777,7 @@ namespace aux {
 
 		io_context& get_context() { return m_ios; }
 
-	private:
+	protected:
 
 		// callbacks for data being sent or received
 		void on_send_data(error_code const& error
@@ -875,7 +875,6 @@ namespace aux {
 #ifndef TORRENT_DISABLE_EXTENSIONS
 		std::list<std::shared_ptr<peer_plugin>> m_extensions;
 #endif
-	private:
 
 		// the average time between incoming pieces. Or, if there is no
 		// outstanding request, the time since the piece was requested. It

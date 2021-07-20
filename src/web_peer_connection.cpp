@@ -96,7 +96,7 @@ web_peer_connection::web_peer_connection(peer_connection_args& pack
 	std::shared_ptr<torrent> t = associated_torrent().lock();
 	bool const single_file_request = t->torrent_file().num_files() == 1;
 
-	if (!single_file_request)
+	if (!single_file_request && web.type !=  web.url_zip_seed)
 	{
 		// handle incorrect .torrent files which are multi-file
 		// but have web seeds not ending with a slash

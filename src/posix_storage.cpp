@@ -538,6 +538,15 @@ namespace aux {
 
 #ifdef TORRENT_WINDOWS
 		FILE* f = ::_wfopen(convert_to_native_path_string(fn).c_str(), mode_str);
+		if (f == nullptr) {
+			for (int i = 0; i < 30; ++i)
+			{
+				f = ::_wfopen(convert_to_native_path_string(fn).c_str(), mode_str);
+				if (f)
+					break;
+				std::this_thread::sleep_for(std::chrono::milliseconds(30));
+			}
+		}
 #else
 		FILE* f = std::fopen(fn.c_str(), mode_str);
 #endif

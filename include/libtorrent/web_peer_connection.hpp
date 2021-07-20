@@ -80,11 +80,11 @@ namespace libtorrent {
 		void write_request(peer_request const& r) override;
 
 		bool received_invalid_data(piece_index_t index, bool single_peer) override;
-
-	private:
-
+		virtual void incoming_payload(char const* buf, int len);
 		void on_receive_padfile();
-		void incoming_payload(char const* buf, int len);
+
+	protected:
+
 		void incoming_zeroes(int len);
 		void handle_redirect(int bytes_left);
 		void handle_error(int bytes_left);

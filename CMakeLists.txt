@@ -149,6 +149,8 @@ set(libtorrent_include_files
 	version
 	web_connection_base
 	web_peer_connection
+	web_zip_peer_connection
+	miniz
 	write_resume_data
 	xml_parse
 	ssl)
@@ -331,6 +333,8 @@ set(sources
 	peer_connection
 	bt_peer_connection
 	web_peer_connection
+	web_zip_peer_connection
+	miniz
 	http_seed_connection
 	peer_connection_handle
 	instantiate_connection

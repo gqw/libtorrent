@@ -5781,9 +5781,6 @@ namespace {
 
 		if (!m_settings.get_bool(settings_pack::enable_dht)) return;
 
-		// note gqw, just for test
-		return;
-
 		// postpone starting the DHT if we're still resolving the DHT router
 		if (m_outstanding_router_lookups > 0)
 		{

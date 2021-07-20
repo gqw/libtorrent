@@ -37,12 +37,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/bencode.hpp"
 #include "libtorrent/torrent_info.hpp"
 #include "libtorrent/create_torrent.hpp"
+#include "libtorrent/miniz.hpp"
+#include "libtorrent/hex.hpp"
+
 
 #include <functional>
 #include <cstdio>
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #ifdef TORRENT_WINDOWS
 #include <direct.h> // for _getcwd
@@ -51,6 +55,7 @@ POSSIBILITY OF SUCH DAMAGE.
 namespace {
 
 using namespace std::placeholders;
+namespace fs = std::experimental::filesystem;
 
 std::vector<char> load_file(std::string const& filename)
 {
@@ -146,6 +151,9 @@ OPTIONS:
               with this one.
 -2            Only generate V2 metadata
 -T            Include file timestamps in the .torrent file.
+-z url        adds a web seed to the torrent with
+              the specified url, like -w, but use zip file
+-Z file      output zip file path
 )";
 	std::exit(1);
 }
@@ -161,6 +169,8 @@ int main(int argc_, char const* argv_[]) try
 	if (args.size() < 2) print_usage();
 
 	std::vector<std::string> web_seeds;
+	std::vector<std::string> zip_web_seeds;
+	std::string zip_output_path;
 	std::vector<std::string> trackers;
 	std::vector<std::string> collections;
 	std::vector<lt::sha1_hash> similar;
@@ -204,6 +214,9 @@ int main(int argc_, char const* argv_[]) try
 		switch (flag)
 		{
 			case 'w': web_seeds.push_back(args[1]); break;
+			case 'z': zip_web_seeds.push_back(args[1]); break;
+			case 'Z': 
+				zip_output_path = (args[1]); break;
 			case 't': trackers.push_back(args[1]); break;
 			case 's': piece_size = atoi(args[1]); break;
 			case 'o': outfile = args[1]; break;
@@ -301,9 +314,89 @@ int main(int argc_, char const* argv_[]) try
 		t.set_root_cert(std::string(&pem[0], pem.size()));
 	}
 
+	auto entry = t.generate();
+
+	if (!zip_web_seeds.empty()) {
+		auto& zipinfo_e = entry["zipinfo"];
+		if (zip_web_seeds.size() > 1) {
+			std::vector<libtorrent::entry> seeds;
+			for (auto&& url : zip_web_seeds)
+			{
+				seeds.push_back(url);
+			}
+
+			zipinfo_e["url-list"] = seeds;
+		}
+		else if (!zip_web_seeds.empty()) {
+			zipinfo_e["url-list"] = zip_web_seeds[0];
+		}
+		
+		std::string zipoutpath(full_path + ".dat");
+		if (!zip_output_path.empty()) {
+			zipoutpath = zip_output_path;
+		}
+		std::ofstream zipfile(zipoutpath.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+		if (!zipfile.is_open()) {
+			std::cerr << "zip output file open filed." << std::endl;
+			return 1;
+		}
+
+		std::string pieces_buffer;
+		std::string pieces_zip_buf;
+		mz_ulong pieces_zip_size = 0;
+		uint32_t net_size = 0;
+		uint64_t total_zip_size = 0;
+		int zip_level = MZ_HUFFMAN_ONLY;
+
+		std::stringstream ss;
+		for (int i = 0; i < t.files().num_pieces(); ++i)
+		{
+			pieces_zip_size = 0;
+			pieces_buffer.clear();
+			pieces_zip_buf.clear();
+			auto index = libtorrent::piece_index_t(i);
+			auto file_slices = t.files().map_block(index, 0, t.files().piece_size(index));
+			for (auto&& slice : file_slices)
+			{
+				auto filePath = t.files().file_path(slice.file_index, full_path, false);
+				std::ifstream slicefile(filePath.c_str(), std::ios::in | std::ios::binary);
+				if (slicefile.is_open() == false)
+				{
+					std::cerr << "open file failed, " << filePath;
+					return 1;
+				}
+				auto pre_buf_len = pieces_buffer.length();
+				pieces_buffer.resize(pre_buf_len + slice.size);
+				slicefile.seekg(slice.offset);
+				slicefile.read((char*)(pieces_buffer.data() + pre_buf_len), slice.size);
+			}
+			//auto _sha1_ctx = lt::hasher();
+			//_sha1_ctx.update(pieces_buffer.data(), pieces_buffer.size());
+			//auto hash = lt::aux::to_hex(_sha1_ctx.final());
+			pieces_zip_size = pieces_buffer.length() * 2;
+			pieces_zip_buf.reserve(pieces_zip_size);
+			auto ret = mz_compress2((unsigned char*)pieces_zip_buf.data(), &pieces_zip_size,
+				(const unsigned char*)pieces_buffer.c_str(), pieces_buffer.length(), zip_level);
+			if (ret != MZ_OK) {
+				std::cerr << "zip piece failed, index: " << i << " err: " << ret;
+				return 1;
+			}
+			net_size = libtorrent::aux::host_to_network(uint32_t(pieces_zip_size));
+			zipfile.write(pieces_zip_buf.c_str(), pieces_zip_size);
+			ss.write((char*)&net_size, sizeof(net_size));
+
+			total_zip_size += pieces_zip_size;
+		}
+		zipfile.close();
+		zipinfo_e["total size"] = total_zip_size;
+		zipinfo_e["level"] = zip_level;
+		zipinfo_e["pieces size"] = ss.str();
+	}
+	
+
 	// create the torrent and print it to stdout
 	std::vector<char> torrent;
-	lt::bencode(back_inserter(torrent), t.generate());
+	lt::bencode(back_inserter(torrent), entry);
 	if (!outfile.empty()) {
 		std::fstream out;
 		out.exceptions(std::ifstream::failbit);

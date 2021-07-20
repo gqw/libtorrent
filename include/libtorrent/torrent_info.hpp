@@ -83,7 +83,7 @@ namespace aux {
 		// http seeds are different from url seeds in the
 		// protocol they use. http seeds follows the original
 		// http seed spec. by John Hoffman
-		enum type_t { url_seed, http_seed };
+		enum type_t { url_seed, http_seed, url_zip_seed };
 
 		using headers_t = std::vector<std::pair<std::string, std::string>>;
 
@@ -117,6 +117,20 @@ namespace aux {
 
 		// The type of web seed (see type_t)
 		std::uint8_t type;
+	};
+
+
+	struct TORRENT_EXPORT zip_web_seed_entry
+	{
+		struct pieces_size_t {
+			pieces_size_t(uint64_t o, uint32_t s) : offset(o), size(s){}
+			uint64_t offset = 0;
+			uint32_t size = 0;
+		};
+		std::vector<std::string> urls;
+		uint64_t total_size = 0;
+		uint64_t zip_level = 0;
+		std::vector<pieces_size_t> pieces_size;
 	};
 
 	// hidden
@@ -339,6 +353,7 @@ TORRENT_VERSION_NAMESPACE_3
 			, web_seed_entry::headers_t const& extra_headers = web_seed_entry::headers_t());
 		std::vector<web_seed_entry> const& web_seeds() const { return m_web_seeds; }
 		void set_web_seeds(std::vector<web_seed_entry> seeds);
+		const zip_web_seed_entry& zip_web_seeds() const { return m_zip_web_seeds; }
 
 		// ``total_size()`` returns the total number of bytes the torrent-file
 		// represents. Note that this is the number of pieces times the piece
@@ -673,6 +688,7 @@ TORRENT_VERSION_NAMESPACE_3
 		// the URLs to the trackers
 		aux::vector<announce_entry> m_urls;
 		std::vector<web_seed_entry> m_web_seeds;
+		zip_web_seed_entry m_zip_web_seeds;
 		// dht nodes to add to the routing table/bootstrap from
 		std::vector<std::pair<std::string, int>> m_nodes;
 
