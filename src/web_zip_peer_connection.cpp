@@ -339,7 +339,9 @@ void web_zip_peer_connection::incoming_payload(char const* buf, int len)
 			{
 				ipr.length = unzip_len >= (mz_ulong)t->block_size() ? t->block_size() : unzip_len;
 				unzip_len -= ipr.length;
+#if TORRENT_USE_ASSERTS
 				m_received_in_piece = ipr.length;
+#endif
 				incoming_piece(ipr, unzip_buf.data() + ipr.start);
 				ipr.start += ipr.length;
 			}
