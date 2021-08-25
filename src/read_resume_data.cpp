@@ -106,6 +106,7 @@ namespace {
 		if (info_hash2.size() == 32)
 			ret.info_hashes.v2.assign(info_hash2.data());
 
+
 		bdecode_node const info = rd.dict_find_dict("info");
 		if (info)
 		{
@@ -135,6 +136,53 @@ namespace {
 						rd.dict_find_int_value("creation date", 0)));
 					ret.ti->internal_set_creator(rd.dict_find_string_value("created by", ""));
 					ret.ti->internal_set_comment(rd.dict_find_string_value("comment", ""));
+				}
+
+
+				if (bdecode_node const zip_info = rd.dict_find_dict("zipinfo")) {
+					do
+					{
+						if (!zip_info) break;
+						auto size_node = zip_info.dict_find_int("total size");
+						if (!size_node) break;
+						ret.ti->zip_web_seeds().total_size = size_node.int_value();
+
+						auto level_node = zip_info.dict_find_int("level");
+						if (!level_node) break;
+						ret.ti->zip_web_seeds().zip_level = level_node.int_value();
+
+						bdecode_node const offsets_node = zip_info.dict_find_string("pieces size");
+						if (!offsets_node) break;
+						std::string offsets = offsets_node.string_value().to_string();
+						if (offsets.length() != ret.ti->num_pieces() * (sizeof(uint32_t))) break;
+
+						uint32_t host_psize = 0;
+						uint64_t offset = 0;
+						std::size_t pos = 0;
+
+						for (int i = 0; i < ret.ti->num_pieces(); ++i)
+						{
+							host_psize = aux::network_to_host(*((uint32_t*)(offsets.data() + sizeof(uint32_t) * i)));
+							pos += sizeof(uint32_t);
+							ret.ti->zip_web_seeds().pieces_size.emplace_back(offset, host_psize);
+							offset += host_psize;
+						}
+
+						bdecode_node const url_seeds = zip_info.dict_find("url-list");
+						if (!url_seeds) break;
+						if (url_seeds.type() == bdecode_node::string_t) {
+							ret.ti->zip_web_seeds().urls.push_back(url_seeds.string_value().to_string());
+						}
+						else if (url_seeds.type() == bdecode_node::list_t) {
+							for (int i = 0, end(url_seeds.list_size()); i < end; ++i)
+							{
+								bdecode_node const url = url_seeds.list_at(i);
+								if (url.type() != bdecode_node::string_t) continue;
+								if (url.string_length() == 0) continue;
+								ret.ti->zip_web_seeds().urls.push_back(url.string_value().to_string());
+							}
+						}
+					} while (false);
 				}
 			}
 		}

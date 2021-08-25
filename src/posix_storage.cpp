@@ -538,7 +538,7 @@ namespace aux {
 
 #ifdef TORRENT_WINDOWS
 		FILE* f = ::_wfopen(convert_to_native_path_string(fn).c_str(), mode_str);
-		if (f == nullptr) {
+		if (f == nullptr && (mode & open_mode::write)) {
 			for (int i = 0; i < 30; ++i)
 			{
 				f = ::_wfopen(convert_to_native_path_string(fn).c_str(), mode_str);

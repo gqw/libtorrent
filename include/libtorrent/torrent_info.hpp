@@ -353,7 +353,8 @@ TORRENT_VERSION_NAMESPACE_3
 			, web_seed_entry::headers_t const& extra_headers = web_seed_entry::headers_t());
 		std::vector<web_seed_entry> const& web_seeds() const { return m_web_seeds; }
 		void set_web_seeds(std::vector<web_seed_entry> seeds);
-		const zip_web_seed_entry& zip_web_seeds() const { return m_zip_web_seeds; }
+		zip_web_seed_entry& zip_web_seeds() { return m_zip_web_seeds; }
+		const zip_web_seed_entry&  const_zip_web_seeds() const { return m_zip_web_seeds; }
 
 		// ``total_size()`` returns the total number of bytes the torrent-file
 		// represents. Note that this is the number of pieces times the piece

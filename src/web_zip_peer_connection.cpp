@@ -191,8 +191,8 @@ void web_zip_peer_connection::write_request(peer_request const& r) {
 
 	// TODO: 3 do we really need a special case here? wouldn't the multi-file
 	// case handle single file torrents correctly too?
-	TORRENT_ASSERT(r.piece < piece_index_t(info.zip_web_seeds().pieces_size.size()));
-	const auto& zip_piece = info.zip_web_seeds().pieces_size[int32_t(r.piece)];
+	TORRENT_ASSERT(r.piece < piece_index_t(info.const_zip_web_seeds().pieces_size.size()));
+	const auto& zip_piece = info.const_zip_web_seeds().pieces_size[int32_t(r.piece)];
 
 	peer_request pr{};
 	pr.piece = r.piece;

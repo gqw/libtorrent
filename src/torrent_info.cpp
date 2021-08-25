@@ -1722,11 +1722,11 @@ namespace {
 			std::string offsets = offsets_node.string_value().to_string();
 			if (offsets.length() != num_pieces() * (sizeof(uint32_t))) break;
 
-			uint32_t psize = 0, host_psize = 0;
+			uint32_t host_psize = 0;
 			uint64_t offset = 0;
 			std::size_t pos = 0;
 
-			for (std::size_t i = 0; i < num_pieces(); ++i)
+			for (int i = 0; i < num_pieces(); ++i)
 			{
 				host_psize = aux::network_to_host(*((uint32_t*)(offsets.data() + sizeof(uint32_t) * i)));
 				pos += sizeof(uint32_t);
@@ -1734,15 +1734,15 @@ namespace {
 				offset += host_psize;
 			}
 
-			bdecode_node const url_seeds = zip_info.dict_find("url-list");
-			if (!url_seeds) break;
-			if (url_seeds.type() == bdecode_node::string_t) {
-				m_zip_web_seeds.urls.push_back(url_seeds.string_value().to_string());
+			bdecode_node const zip_url_seeds = zip_info.dict_find("url-list");
+			if (!zip_url_seeds) break;
+			if (zip_url_seeds.type() == bdecode_node::string_t) {
+				m_zip_web_seeds.urls.push_back(zip_url_seeds.string_value().to_string());
 			}
-			else if (url_seeds.type() == bdecode_node::list_t) {
-				for (int i = 0, end(url_seeds.list_size()); i < end; ++i)
+			else if (zip_url_seeds.type() == bdecode_node::list_t) {
+				for (int i = 0, end(zip_url_seeds.list_size()); i < end; ++i)
 				{
-					bdecode_node const url = url_seeds.list_at(i);
+					bdecode_node const url = zip_url_seeds.list_at(i);
 					if (url.type() != bdecode_node::string_t) continue;
 					if (url.string_length() == 0) continue;
 					m_zip_web_seeds.urls.push_back(url.string_value().to_string());

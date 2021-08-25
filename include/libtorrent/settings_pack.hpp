@@ -988,6 +988,11 @@ namespace aux {
 			// previously deleted information from the disk.
 			enable_set_file_valid_data,
 
+
+
+			// forbid bt connection
+			forbid_bt_connet,
+
 			max_bool_setting_internal
 		};
 

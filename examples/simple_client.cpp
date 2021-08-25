@@ -36,11 +36,14 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "libtorrent/session.hpp"
 #include "libtorrent/torrent_info.hpp"
 #include "libtorrent/alert_types.hpp"
+#include "libtorrent/read_resume_data.hpp"
+#include "libtorrent/write_resume_data.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <chrono>
 #include <thread>
+#include <csignal>
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
@@ -112,6 +115,10 @@ file_pointer open_file()
 	return file_pointer{ f };
 }
 
+void test() {
+	TORRENT_ASSERT_VAL(1, 2);
+}
+
 bool fopenerr(const wchar_t* path) {
 	auto index = 0, max_errtimes = 20;
 	while (++index && max_errtimes > 0)
@@ -128,7 +135,7 @@ bool fopenerr(const wchar_t* path) {
 		//		std::this_thread::sleep_for(30ms);
 		//	}
 		//}
-
+		test();
 		if (f == nullptr) {
 			std::cerr << index << ": open file failed, errno: " << errno << " " << strerror(errno) << std::endl;
 			max_errtimes--;
@@ -144,13 +151,26 @@ bool fopenerr(const wchar_t* path) {
 #include <filesystem>
 namespace fs = std::experimental::filesystem;
 
+bool load_file(std::string const& filename, std::vector<char>& v)
+{
+	std::fstream f(filename, std::ios_base::in | std::ios_base::binary);
+	f.seekg(0, std::ios_base::end);
+	auto const s = f.tellg();
+	if (s == -1) return false;
+	f.seekg(0, std::ios_base::beg);
+	if (s == std::fstream::pos_type(0)) return !f.fail();
+	v.resize(static_cast<std::size_t>(s));
+	f.read(v.data(), int(v.size()));
+	return !f.fail();
+}
+lt::torrent_handle g_th;
+
 int main(int argc, char* argv[]) try
 {
-	
-	//wchar_t fullp[_MAX_PATH]{};
-	//std::wstring path = LR"(.\npl-demo.exe)";
-	//_wfullpath(fullp, path.c_str(), _MAX_PATH);
-	//path = fullp;
+	wchar_t fullp[_MAX_PATH]{};
+	std::wstring path = LR"(.\npl-demo.exe)";
+	_wfullpath(fullp, path.c_str(), _MAX_PATH);
+	path = fullp;
 
 	//fs::path pf(path);
 	//if (!fs::exists(pf.parent_path())) {
@@ -173,6 +193,7 @@ int main(int argc, char* argv[]) try
 		std::cout << "log open failed" << std::endl;
 	}
 
+	std::string resume_path = "resume.data";
 	lt::settings_pack setting;
 	setting.set_int(lt::settings_pack::alert_mask
 		, lt::alert_category::error
@@ -180,12 +201,33 @@ int main(int argc, char* argv[]) try
 		| lt::alert_category::status
 		| lt::alert_category::stats
 		| lt::alert_category::torrent_log);
+	// setting.set_int(lt::settings_pack::checking_mem_usage, 16000);
+	setting.set_int(lt::settings_pack::hashing_threads, 8);
+	setting.set_bool(lt::settings_pack::forbid_bt_connet, true);
+	// setting.set_int(lt::settings_pack::connections_limit, 1);
 
 	lt::session s(setting);
 	lt::add_torrent_params p;
 	p.save_path = ".";
 	p.ti = std::make_shared<lt::torrent_info>(argv[1]);
-	s.add_torrent(p);
+	//std::vector<char> resume_data;
+	//if (resume_path.empty() == false && load_file(resume_path, resume_data))
+	//{
+	//	lt::error_code ec;
+	//	auto pp = lt::read_resume_data(resume_data, ec);
+	//	if (!ec) {
+	//		p = pp;
+	//	}
+	//	else {
+	//		of << "read resume data failed, " << resume_path << " code: " << ec;
+	//	}
+	//}
+	g_th =s.add_torrent(p);
+
+	std::signal(SIGINT, [](int ) {
+		g_th.save_resume_data(lt::torrent_handle::save_info_dict);
+		std::cout << "test sig" << std::endl;
+		});
 	// wait for the user to end
 
 	bool finished = false;
@@ -205,6 +247,18 @@ int main(int argc, char* argv[]) try
 			}
 			if (auto st = lt::alert_cast<lt::torrent_error_alert>(a)) {
 				of << a->what() << " : " << a->category() << " : " << a->message() << std::endl;
+			}
+
+			if (auto rd = lt::alert_cast<lt::save_resume_data_alert>(a)) {
+				std::ofstream off(resume_path.c_str(), std::ios_base::binary);
+				off.unsetf(std::ios_base::skipws);
+				auto const b = lt::write_resume_data_buf(rd->params);
+				off.write(b.data(), int(b.size()));
+			}
+
+			if (auto st = lt::alert_cast<lt::state_changed_alert>(a)) {
+				of << st->what() << " : " << st->category() << " : " << st->message();
+				st->handle.save_resume_data(lt::torrent_handle::save_info_dict);
 			}
 
 			if (auto st = lt::alert_cast<lt::state_update_alert>(a)) {

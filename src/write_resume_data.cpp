@@ -102,7 +102,7 @@ namespace libtorrent {
 
 		ret["info-hash"] = atp.info_hashes.v1;
 		ret["info-hash2"] = atp.info_hashes.v2;
-
+		uint32_t net_size = 0;
 		if (atp.ti)
 		{
 			auto const info = atp.ti->info_section();
@@ -113,6 +113,31 @@ namespace libtorrent {
 				ret["creation date"] = atp.ti->creation_date();
 			if (!atp.ti->creator().empty())
 				ret["created by"] = atp.ti->creator();
+
+			if (!atp.ti->zip_web_seeds().urls.empty()) {
+				if (atp.ti->zip_web_seeds().urls.size() > 1) {
+					std::vector<libtorrent::entry> seeds;
+					for (auto&& url : atp.ti->zip_web_seeds().urls)
+					{
+						seeds.push_back(url);
+					}
+
+					ret["zipinfo"]["url-list"] = seeds;
+				}
+				else {
+					ret["zipinfo"]["url-list"] = atp.ti->zip_web_seeds().urls[0];
+				}
+
+				std::stringstream ss;
+				for (const auto& psize : atp.ti->zip_web_seeds().pieces_size)
+				{
+					net_size = libtorrent::aux::host_to_network(uint32_t(psize.size));
+					ss.write((char*)&net_size, sizeof(net_size));
+				}
+				ret["zipinfo"]["pieces size"] = ss.str();
+				ret["zipinfo"]["total size"] = atp.ti->zip_web_seeds().total_size;
+				ret["zipinfo"]["level"] = atp.ti->zip_web_seeds().zip_level;
+			}
 		}
 
 		if (!atp.merkle_trees.empty())

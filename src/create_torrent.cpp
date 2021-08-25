@@ -144,17 +144,25 @@ namespace {
 			}
 			else
 			{
-				std::fstream in;
-				in.exceptions(std::ifstream::failbit);
-				in.open(f, std::ios_base::in | std::ios_base::binary);
-				in.seekg(0, std::ios_base::end);
-				size_t const size = size_t(in.tellg());
-				in.seekg(0, std::ios_base::beg);
-				std::vector<char> ret(size);
-				in.read(ret.data(), int(size));
-				hasher h(ret.data(), size);
-				error_code ec;
-				fs.add_file_borrow(ec, {}, l, s.file_size, file_flags, aux::to_hex(h.final()).c_str(), std::time_t(s.mtime));
+				std::string f_hash;
+				do 
+				{
+					std::fstream in;
+					in.exceptions(std::ifstream::failbit);
+					in.open(f, std::ios_base::in | std::ios_base::binary);
+					if (!in.is_open()) break;
+
+					in.seekg(0, std::ios_base::end);
+					size_t const size = size_t(in.tellg());
+					if (size <= 0) break;
+					
+					in.seekg(0, std::ios_base::beg);
+					std::vector<char> ret(size);
+					in.read(ret.data(), int(size));
+					hasher h(ret.data(), size);
+					f_hash = aux::to_hex(h.final());
+				} while (false);
+				fs.add_file_borrow(ec, {}, l, s.file_size, file_flags, f_hash.empty() ? nullptr : f_hash.c_str(), std::time_t(s.mtime));
 				if (ec) aux::throw_ex<system_error>(ec);
 
 				// fs.add_file(l, s.file_size, file_flags, std::time_t(s.mtime));

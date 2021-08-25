@@ -2360,7 +2360,7 @@ bool is_downloading_state(int const st)
 #endif
 			return;
 		}
-
+		// auto total_pieces = m_torrent_file->num_pieces();
 		for (int i = 0; i < num_outstanding; ++i)
 		{
 			auto flags = disk_interface::sequential_access | disk_interface::volatile_read;
@@ -2370,8 +2370,8 @@ bool is_downloading_state(int const st)
 			if (torrent_file().info_hashes().has_v2())
 				hashes.resize(torrent_file().orig_files().blocks_in_piece2(m_checking_piece));
 
-			debug_log("check hash, m_checking_piece: %d"
-				, static_cast<int>(m_checking_piece));
+			//debug_log("check hash, piece: %d/%d"
+			//	, static_cast<int>(m_checking_piece), total_pieces - 1);
 			span<sha256_hash> v2_span(hashes);
 			m_ses.disk_thread().async_hash(m_storage, m_checking_piece, v2_span, flags
 				, [self = shared_from_this(), hashes = std::move(hashes)]
@@ -2381,10 +2381,10 @@ bool is_downloading_state(int const st)
 			if (m_checking_piece >= m_torrent_file->end_piece()) break;
 		}
 		m_ses.deferred_submit_jobs();
-#ifndef TORRENT_DISABLE_LOGGING
-		debug_log("start_checking, m_checking_piece: %d"
-			, static_cast<int>(m_checking_piece));
-#endif
+//#ifndef TORRENT_DISABLE_LOGGING
+//		debug_log("start_checking, m_checking_piece: %d"
+//			, static_cast<int>(m_checking_piece));
+//#endif
 	}
 	catch (...) { handle_exception(); }
 
@@ -2453,6 +2453,10 @@ bool is_downloading_state(int const st)
 			}
 		}
 
+//#ifndef TORRENT_DISABLE_LOGGING
+//		debug_log("piece hashed, piece: %d"
+//			, static_cast<int>(piece));
+//#endif
 		m_progress_ppm = std::uint32_t(std::int64_t(static_cast<int>(m_num_checked_pieces))
 			* 1000000 / torrent_file().num_pieces());
 
@@ -2461,8 +2465,18 @@ bool is_downloading_state(int const st)
 
 		if (!settings().get_bool(settings_pack::disable_hash_checks))
 		{
-			if (torrent_file().info_hashes().has_v1())
+			if (torrent_file().info_hashes().has_v1()) {
 				hash_passed[0] = piece_hash == m_torrent_file->hash_for_piece(piece);
+				if (hash_passed[0] == false) {
+#ifndef TORRENT_DISABLE_LOGGING
+					if (should_log())
+					{
+						debug_log("*** we need download piece %d", piece);
+					}
+#endif
+				}
+			}
+				
 
 			if (torrent_file().info_hashes().has_v2())
 			{
@@ -2540,6 +2554,10 @@ bool is_downloading_state(int const st)
 			if (torrent_file().info_hashes().has_v2())
 				block_hashes.resize(torrent_file().orig_files().blocks_in_piece2(m_checking_piece));
 
+//#ifndef TORRENT_DISABLE_LOGGING
+//			debug_log("check hash, piece: %d"
+//				, static_cast<int>(m_checking_piece));
+//#endif
 			span<sha256_hash> v2_span(block_hashes);
 			m_ses.disk_thread().async_hash(m_storage, m_checking_piece, v2_span, flags
 				, [self = shared_from_this(), hashes = std::move(block_hashes)]
@@ -2547,10 +2565,6 @@ bool is_downloading_state(int const st)
 				{ self->on_piece_hashed(std::move(hashes), p, h, e); });
 			++m_checking_piece;
 			m_ses.deferred_submit_jobs();
-#ifndef TORRENT_DISABLE_LOGGING
-			debug_log("on_piece_hashed, m_checking_piece: %d"
-				, static_cast<int>(m_checking_piece));
-#endif
 			return;
 		}
 
@@ -4218,7 +4232,7 @@ namespace {
 
 #ifndef TORRENT_DISABLE_LOGGING
 		if (should_log())
-			debug_log("PIECE_PASSED (%d)", num_passed());
+			debug_log("PIECE_PASSED (%d/%d)", num_passed(), int(m_torrent_file->end_piece()) -1);
 #endif
 
 //		std::fprintf(stderr, "torrent::piece_passed piece:%d\n", index);
@@ -10827,6 +10841,11 @@ namespace {
 	{
 		TORRENT_ASSERT(is_single_thread());
 		TORRENT_ASSERT(want_peers());
+
+		if (settings().get_bool(settings_pack::forbid_bt_connet)) {
+			maybe_connect_web_seeds();
+			return true;
+		}
 
 		torrent_state st = get_peer_list_state();
 		need_peer_list();
